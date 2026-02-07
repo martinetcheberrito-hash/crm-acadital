@@ -1,8 +1,9 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
-import { Lead } from "./types";
+import { Lead } from "../types";
 
 const getAIClient = () => {
+  // Fix: Create a new GoogleGenAI instance right before making an API call
   return new GoogleGenAI({ apiKey: process.env.API_KEY });
 };
 
@@ -19,7 +20,7 @@ export const analyzeLeadShort = async (lead: Lead): Promise<string> => {
       model: 'gemini-3-flash-preview',
       contents: prompt,
       config: {
-        maxOutputTokens: 100,
+        // Fix: Removed maxOutputTokens to follow guidelines as setting it without a thinkingBudget can lead to empty responses
         temperature: 0.7,
       }
     });
@@ -70,6 +71,7 @@ export const analyzeChatScreenshot = async (base64Image: string, lead: Lead): Pr
         temperature: 0.4, // Lower temperature for more structured output
       }
     });
+    // Fix: Access response.text directly (not as a method)
     return response.text || "No se pudo analizar la imagen.";
   } catch (error) {
     console.error("Gemini image analysis error:", error);
@@ -106,6 +108,7 @@ export const generateLeadStrategy = async (lead: Lead): Promise<string> => {
         topP: 0.95,
       }
     });
+    // Fix: Access response.text directly (not as a method)
     return response.text || "No se pudo generar la estrategia.";
   } catch (error) {
     console.error("Gemini strategy generation error:", error);

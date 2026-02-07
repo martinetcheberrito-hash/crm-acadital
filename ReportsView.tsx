@@ -1,339 +1,280 @@
 
-import React, { useMemo, useState } from 'react';
-import { Lead, LeadOrigin, Qualification } from './types';
+import React, { useMemo, useState, useEffect } from 'react';
+import { Lead, LeadOrigin, Qualification } from '../types';
 import { 
-  BarChart3, 
-  Target, 
-  TrendingUp, 
-  DollarSign, 
-  ArrowUpRight, 
-  Users, 
-  Zap, 
-  PieChart,
-  Activity,
-  Wallet,
-  Clock,
-  ShieldCheck,
-  UserCheck,
-  Filter,
-  ArrowRight,
-  ChevronDown
+  BarChart3, Target, TrendingUp, DollarSign, ArrowUpRight, Users, Zap, PieChart, Activity, Wallet, Clock, Filter, Calendar, Percent, UserCheck, ChevronDown
 } from 'lucide-react';
 
 interface ReportsViewProps {
   leads: Lead[];
+  currentPeriod: '7days' | 'month' | 'all' | 'custom';
 }
 
-type LocalRange = '7days' | 'month' | 'all';
+const ReportsView: React.FC<ReportsViewProps> = ({ leads, currentPeriod }) => {
+  const [localRange, setLocalRange] = useState<'7days' | 'month' | 'all' | 'custom'>(currentPeriod);
+  const [startDate, setStartDate] = useState<string>('');
+  const [endDate, setEndDate] = useState<string>('');
 
-const ReportsView: React.FC<ReportsViewProps> = ({ leads: allLeads }) => {
-  const [localRange, setLocalRange] = useState<LocalRange>('all');
-
-  // Filtrado local para los reportes
-  const filteredLeads = useMemo(() => {
-    const now = new Date();
-    return allLeads.filter(lead => {
-      const leadDate = new Date(lead.created_at);
-      if (localRange === '7days') return (now.getTime() - leadDate.getTime()) <= 7 * 24 * 60 * 60 * 1000;
-      if (localRange === 'month') return leadDate.getMonth() === now.getMonth() && leadDate.getFullYear() === now.getFullYear();
-      return true;
-    });
-  }, [allLeads, localRange]);
+  useEffect(() => {
+    if (currentPeriod !== 'custom') {
+      setLocalRange(currentPeriod);
+    }
+  }, [currentPeriod]);
 
   const metrics = useMemo(() => {
-    const totalRevenue = filteredLeads.reduce((acc, l) => acc + (l.revenue || 0), 0);
-    const totalCollected = filteredLeads.reduce((acc, l) => acc + (l.collected_amount || 0), 0);
-    const totalSetterCommissions = filteredLeads.reduce((acc, l) => acc + (l.setter_commission || 0), 0);
-    const totalCloserCommissions = filteredLeads.reduce((acc, l) => acc + (l.closer_commission || 0), 0);
-    const totalCommissions = totalSetterCommissions + totalCloserCommissions;
+    const now = new Date();
+    let start = new Date();
+    let end = new Date();
     
-    const payingLeads = filteredLeads.filter(l => l.bought).length;
-    const avgTicket = payingLeads > 0 ? totalRevenue / payingLeads : 0;
-    const collectionEfficiency = totalRevenue > 0 ? (totalCollected / totalRevenue) * 100 : 0;
+    if (localRange === '7days') {
+      start.setDate(now.getDate() - 7);
+    } else if (localRange === 'month') {
+      start.setDate(1);
+    } else if (localRange === 'custom' && startDate && endDate) {
+      start = new Date(startDate);
+      end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+    } else {
+      // 'all' logic
+      start = new Date(0);
+    }
+    
+    start.setHours(0, 0, 0, 0);
+    if (localRange !== 'custom') {
+      end = now;
+    }
 
-    // Funnel Stats
-    const totalLeadsCount = filteredLeads.length;
-    const attendedCount = filteredLeads.filter(l => l.attended === 'Si').length;
-    const offersCount = filteredLeads.filter(l => l.offer_made).length;
-    const salesCount = payingLeads;
+    // Filtrar leads por agenda en el periodo
+    const agendasInPeriod = leads.filter(l => {
+      if (!l.call_date) return false;
+      if (localRange === 'all') return true;
+      const callDate = new Date(l.call_date);
+      return callDate >= start && callDate <= end;
+    });
 
-    // Personnel breakdown (Setters)
-    const setterStats = filteredLeads.reduce((acc: any, lead) => {
-      const name = lead.setter || 'Sin Asignar';
-      if (!acc[name]) acc[name] = { name, count: 0, sales: 0, commissions: 0 };
-      acc[name].count++;
-      if (lead.bought) acc[name].sales++;
-      acc[name].commissions += (lead.setter_commission || 0);
+    // Filtrar ventas por fecha de pago en el periodo
+    const salesInPeriod = leads.filter(l => {
+      if (!l.bought || !l.first_payment_date) return false;
+      if (localRange === 'all') return true;
+      const payDate = new Date(l.first_payment_date);
+      return payDate >= start && payDate <= end;
+    });
+
+    const totalRevenue = salesInPeriod.reduce((acc, l) => acc + (l.revenue || 0), 0);
+    const totalCollected = salesInPeriod.reduce((acc, l) => acc + (l.collected_amount || 0), 0);
+    const setterCommissions = salesInPeriod.reduce((acc, l) => acc + (l.setter_commission || 0), 0);
+    const closerCommissions = salesInPeriod.reduce((acc, l) => acc + (l.closer_commission || 0), 0);
+    
+    const offersCount = agendasInPeriod.filter(l => l.offer_made).length;
+    const closureRateOnOffers = offersCount > 0 ? (salesInPeriod.length / offersCount) * 100 : 0;
+
+    // Timeline de agendas (Agrupado por día)
+    const timelineData = agendasInPeriod.reduce((acc: any, lead) => {
+      const dateKey = new Date(lead.call_date!).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
+      acc[dateKey] = (acc[dateKey] || 0) + 1;
       return acc;
     }, {});
 
-    // Personnel breakdown (Closers)
-    const closerStats = filteredLeads.reduce((acc: any, lead) => {
-      const name = lead.closer || 'Sin Asignar';
-      if (!acc[name]) acc[name] = { name, count: 0, sales: 0, commissions: 0 };
-      acc[name].count++;
-      if (lead.bought) acc[name].sales++;
-      acc[name].commissions += (lead.closer_commission || 0);
+    const sortedTimeline = Object.entries(timelineData).map(([date, count]) => ({ date, count: count as number }));
+
+    // Distribución por Origen
+    const originDistribution = agendasInPeriod.reduce((acc: any, lead) => {
+      acc[lead.origin] = (acc[lead.origin] || 0) + 1;
       return acc;
     }, {});
 
-    // Qual analysis (Mix de Leads)
-    const quals = Object.values(Qualification).map(q => {
-      const count = filteredLeads.filter(l => l.qualification === q).length;
-      const percentage = totalLeadsCount > 0 ? (count / totalLeadsCount) * 100 : 0;
-      return { level: q, count, percentage };
-    }).sort((a, b) => a.level === 'NoCalif' ? 1 : b.level === 'NoCalif' ? -1 : a.level.localeCompare(b.level));
+    const sortedOrigins = Object.entries(originDistribution)
+      .map(([name, count]) => ({ name, count: count as number }))
+      .sort((a, b) => b.count - a.count);
 
     return {
       totalRevenue,
       totalCollected,
-      totalCommissions,
-      totalSetterCommissions,
-      totalCloserCommissions,
-      avgTicket,
-      collectionEfficiency,
-      quals,
-      setterStats: Object.values(setterStats).sort((a: any, b: any) => b.commissions - a.commissions),
-      closerStats: Object.values(closerStats).sort((a: any, b: any) => b.commissions - a.commissions),
-      totalLeadsCount,
-      attendedCount,
+      setterCommissions,
+      closerCommissions,
+      totalAgendas: agendasInPeriod.length,
       offersCount,
-      salesCount
+      closureRateOnOffers,
+      sortedTimeline,
+      sortedOrigins
     };
-  }, [filteredLeads]);
+  }, [leads, localRange, startDate, endDate]);
+
+  const maxAgendas = Math.max(...metrics.sortedTimeline.map(t => t.count), 1);
 
   return (
     <div className="space-y-10 animate-in fade-in duration-700">
-      {/* Header with Local Period Filter */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 border-b border-slate-800 pb-8">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 border-b border-slate-200 pb-8">
         <div className="flex flex-col gap-1">
-          <h1 className="text-4xl font-black text-white uppercase tracking-tighter italic">Acadital Intelligence</h1>
-          <p className="text-slate-500 font-medium italic">Visión estratégica y métricas de crecimiento empresarial.</p>
+          <h1 className="text-4xl font-black text-slate-900 uppercase tracking-tighter italic leading-none">BI Inteligencia</h1>
+          <p className="text-slate-500 font-medium">Análisis avanzado de performance y flujo de caja.</p>
         </div>
         
-        <div className="flex items-center gap-3 bg-slate-900/50 border border-slate-800 p-2 rounded-2xl shadow-xl">
-           <Filter className="w-4 h-4 text-slate-600 ml-2" />
-           <div className="flex bg-slate-950 p-1 rounded-xl">
-             {(['7days', 'month', 'all'] as LocalRange[]).map((range) => (
-                <button 
-                  key={range}
-                  onClick={() => setLocalRange(range)}
-                  className={`px-6 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${localRange === range ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-600 hover:text-slate-400'}`}
-                >
-                  {range === '7days' ? '7 Días' : range === 'month' ? 'Este Mes' : 'Histórico'}
-                </button>
-             ))}
+        <div className="flex flex-col md:flex-row items-end md:items-center gap-4">
+           {localRange === 'custom' && (
+             <div className="flex items-center gap-2 bg-white border border-slate-200 p-2 rounded-2xl shadow-sm animate-in slide-in-from-right-4 duration-300">
+                <input 
+                  type="date" 
+                  className="bg-transparent text-[10px] font-black uppercase outline-none px-2 text-slate-600"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                />
+                <div className="w-px h-4 bg-slate-200"></div>
+                <input 
+                  type="date" 
+                  className="bg-transparent text-[10px] font-black uppercase outline-none px-2 text-slate-600"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                />
+             </div>
+           )}
+           <div className="flex items-center gap-3 bg-white border border-slate-200 p-2 rounded-2xl shadow-sm">
+              <div className="flex bg-slate-50 p-1 rounded-xl">
+                {(['7days', 'month', 'all', 'custom'] as const).map((range) => (
+                   <button 
+                     key={range}
+                     onClick={() => setLocalRange(range)}
+                     className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${localRange === range ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400'}`}
+                   >
+                     {range === '7days' ? 'Semana' : range === 'month' ? 'Mes' : range === 'all' ? 'Todo' : 'Personalizado'}
+                   </button>
+                ))}
+              </div>
            </div>
         </div>
       </div>
 
-      {/* Main Business Metrics Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <KPICard 
-          label="Caja Neta (Collected)" 
-          value={`$${metrics.totalCollected.toLocaleString()}`} 
-          subValue={`${metrics.collectionEfficiency.toFixed(1)}% Eficiencia Cobro`} 
-          icon={Wallet} 
-          color="emerald" 
-        />
-        <KPICard 
-          label="Ticket Promedio" 
-          value={`$${metrics.avgTicket.toLocaleString(undefined, { maximumFractionDigits: 0 })}`} 
-          subValue="Monto medio por cierre" 
-          icon={Zap} 
-          color="indigo" 
-        />
-        <KPICard 
-          label="Costo Comisiones" 
-          value={`$${metrics.totalCommissions.toLocaleString()}`} 
-          subValue={`Margen post-incentivos: $${(metrics.totalCollected - metrics.totalCommissions).toLocaleString()}`} 
-          icon={UserCheck} 
-          color="blue" 
-        />
-        <KPICard 
-          label="Revenue en Pipeline" 
-          value={`$${(metrics.totalRevenue - metrics.totalCollected).toLocaleString()}`} 
-          subValue="Pendiente de recaudación" 
-          icon={TrendingUp} 
-          color="amber" 
-        />
+      {/* Grid de KPIs con Revenue incluido */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+        <KPICard label="Cash Collected" value={`$${metrics.totalCollected.toLocaleString()}`} icon={Wallet} color="text-emerald-600" />
+        <KPICard label="Revenue Bruto" value={`$${metrics.totalRevenue.toLocaleString()}`} icon={DollarSign} color="text-indigo-600" />
+        <KPICard label="Tasa s/ Ofertas" value={`${metrics.closureRateOnOffers.toFixed(1)}%`} icon={Target} color="text-amber-500" />
+        <KPICard label="Comis. Setter" value={`$${metrics.setterCommissions.toLocaleString()}`} icon={UserCheck} color="text-sky-500" />
+        <KPICard label="Comis. Closer" value={`$${metrics.closerCommissions.toLocaleString()}`} icon={Zap} color="text-rose-500" />
       </div>
 
-      {/* Conversion Funnel & Mix de Leads */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
-        
-        {/* Sales Funnel */}
-        <div className="lg:col-span-7 bg-slate-900/40 border border-slate-800 rounded-[2.5rem] p-8 shadow-2xl relative overflow-hidden group">
-          <div className="absolute top-0 right-0 p-8 opacity-5">
-            <Activity className="w-32 h-32 text-indigo-500" />
+        <div className="lg:col-span-8 bg-white border border-slate-200 rounded-[2.5rem] p-10 shadow-sm relative group">
+          <div className="flex items-center justify-between mb-12">
+             <div className="space-y-1">
+                <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest flex items-center gap-3">
+                  <Activity className="w-5 h-5 text-indigo-600" /> Flujo de Agendas
+                </h3>
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tight ml-8">Actividad cronológica en el periodo seleccionado</p>
+             </div>
+             <div className="bg-indigo-50 px-4 py-2 rounded-xl flex items-center gap-3">
+                <div className="w-2 h-2 bg-indigo-600 rounded-full animate-pulse shadow-sm shadow-indigo-300"></div>
+                <span className="text-[11px] font-black text-indigo-600 uppercase tracking-widest">Total: {metrics.totalAgendas}</span>
+             </div>
           </div>
-          <div className="flex items-center justify-between mb-10">
-             <h3 className="text-sm font-black text-white uppercase tracking-[0.2em] flex items-center gap-3">
-               <Target className="w-5 h-5 text-indigo-500" /> Embudo de Conversión
-             </h3>
-             <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Ratio Cierre: {((metrics.salesCount / Math.max(metrics.totalLeadsCount, 1)) * 100).toFixed(1)}%</span>
-          </div>
+          
+          <div className="relative h-72">
+            <div className="absolute inset-0 flex flex-col justify-between pointer-events-none">
+               {[...Array(5)].map((_, i) => (
+                 <div key={i} className="w-full border-b border-slate-100 h-0"></div>
+               ))}
+            </div>
 
-          <div className="space-y-6">
-             <FunnelStep label="Prospectos Totales" count={metrics.totalLeadsCount} total={metrics.totalLeadsCount} color="bg-slate-800" />
-             <FunnelStep label="Llamadas Asistidas" count={metrics.attendedCount} total={metrics.totalLeadsCount} color="bg-indigo-900/40" />
-             <FunnelStep label="Ofertas Realizadas" count={metrics.offersCount} total={metrics.totalLeadsCount} color="bg-indigo-700/60" />
-             <FunnelStep label="Ventas Cerradas" count={metrics.salesCount} total={metrics.totalLeadsCount} color="bg-emerald-600" />
+            <div className="relative h-full flex items-end gap-3 z-10 px-2">
+               {metrics.sortedTimeline.length > 0 ? metrics.sortedTimeline.map((item, i) => (
+                 <div key={i} className="flex-1 flex flex-col items-center h-full justify-end group/bar">
+                    <div 
+                      className="w-full relative transition-all duration-500 ease-out group-hover/bar:scale-x-105"
+                      style={{ height: `${(item.count / maxAgendas) * 100}%` }}
+                    >
+                       <div className="w-full h-full bg-gradient-to-t from-indigo-700 via-indigo-500 to-sky-400 rounded-t-2xl shadow-lg shadow-indigo-100 transition-all duration-300 group-hover/bar:brightness-110"></div>
+                       <div className="absolute top-0 left-0 w-full h-1 bg-white/30 rounded-t-full"></div>
+                       <div className="absolute -top-12 left-1/2 -translate-x-1/2 opacity-0 group-hover/bar:opacity-100 transition-all duration-300 scale-90 group-hover/bar:scale-100 pointer-events-none z-20">
+                          <div className="bg-slate-900 text-white text-[10px] font-black px-3 py-2 rounded-xl whitespace-nowrap shadow-2xl relative">
+                            {item.count} Agendas
+                            <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-slate-900 rotate-45"></div>
+                          </div>
+                       </div>
+                    </div>
+                    <div className="mt-4 flex flex-col items-center">
+                       <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter group-hover/bar:text-indigo-600 transition-colors whitespace-nowrap">
+                         {item.date}
+                       </span>
+                    </div>
+                 </div>
+               )) : (
+                 <div className="w-full h-full flex flex-col items-center justify-center border-2 border-dashed border-slate-100 rounded-3xl bg-slate-50/30 gap-4">
+                    <Calendar className="w-8 h-8 text-slate-200" />
+                    <span className="text-slate-300 font-black text-[10px] uppercase tracking-widest">Sin agendas registradas</span>
+                 </div>
+               )}
+            </div>
           </div>
         </div>
 
-        {/* Mix de Leads (BI Analysis) */}
-        <div className="lg:col-span-5 bg-slate-900/40 border border-slate-800 rounded-[2.5rem] p-8 shadow-2xl">
-          <h3 className="text-sm font-black text-white uppercase tracking-[0.2em] mb-8 flex items-center gap-3">
-            <PieChart className="w-5 h-5 text-indigo-500" /> Mix de Cualificación
+        <div className="lg:col-span-4 bg-white border border-slate-200 rounded-[2.5rem] p-10 shadow-sm">
+          <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest mb-10 flex items-center gap-3">
+            <PieChart className="w-5 h-5 text-indigo-600" /> Orígenes de Leads
           </h3>
-          <div className="space-y-8">
-            {metrics.quals.map(qual => (
-              <div key={qual.level} className="space-y-2">
+          <div className="space-y-6">
+            {metrics.sortedOrigins.map((origin, i) => (
+              <div key={i} className="space-y-2">
                  <div className="flex justify-between items-end">
-                   <div className="flex items-center gap-3">
-                     <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-[10px] ${
-                        qual.level === '1' ? 'bg-emerald-500 text-white' :
-                        qual.level === '2' ? 'bg-amber-400 text-slate-900' :
-                        qual.level === '3' ? 'bg-orange-500 text-white' :
-                        'bg-rose-600 text-white'
-                     }`}>
-                       {qual.level === 'NoCalif' ? 'NC' : qual.level}
-                     </div>
-                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Leads Nivel {qual.level === 'NoCalif' ? 'Descartado' : qual.level}</span>
-                   </div>
-                   <span className="text-xs font-mono font-black text-white">{qual.count} <span className="text-slate-600 ml-1">({qual.percentage.toFixed(0)}%)</span></span>
+                   <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{origin.name}</span>
+                   <span className="text-xs font-mono font-black text-slate-900">{origin.count}</span>
                  </div>
-                 <div className="h-2.5 bg-slate-950 rounded-full overflow-hidden border border-slate-800">
+                 <div className="h-2.5 bg-slate-50 rounded-full overflow-hidden border border-slate-100 shadow-inner">
                    <div 
-                    className={`h-full transition-all duration-1000 ${
-                      qual.level === '1' ? 'bg-emerald-500' : 
-                      qual.level === '2' ? 'bg-amber-400' : 
-                      qual.level === '3' ? 'bg-orange-500' : 
-                      'bg-rose-600'
-                    }`} 
-                    style={{ width: `${qual.percentage}%` }}
+                    className="h-full bg-gradient-to-r from-indigo-600 to-indigo-400 transition-all duration-1000 ease-out shadow-sm" 
+                    style={{ width: `${(origin.count / (metrics.totalAgendas || 1)) * 100}%` }}
                    />
                  </div>
               </div>
             ))}
+            {metrics.sortedOrigins.length === 0 && (
+              <p className="text-center text-slate-300 text-[10px] font-black uppercase py-10">No hay orígenes registrados</p>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Staff Performance Breakdown */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div className="bg-slate-900/50 border border-slate-800 rounded-[2rem] p-8 space-y-6 shadow-xl">
-          <h3 className="text-xs font-black text-white uppercase tracking-widest flex items-center gap-3">
-            <UserCheck className="w-5 h-5 text-indigo-400" /> Rendimiento de Setters
-          </h3>
-          <div className="grid grid-cols-1 gap-4">
-            {metrics.setterStats.map((person: any) => (
-              <div key={person.name} className="flex items-center justify-between p-4 bg-slate-950/40 rounded-2xl border border-slate-800 hover:border-indigo-500/30 transition-all">
-                <div className="flex items-center gap-4">
-                   <div className="w-10 h-10 bg-indigo-500/10 rounded-xl flex items-center justify-center text-xs font-black text-indigo-400">
-                     {person.name.substring(0, 2).toUpperCase()}
-                   </div>
-                   <div>
-                     <p className="text-sm font-black text-white uppercase">{person.name}</p>
-                     <p className="text-[10px] text-slate-600 font-bold uppercase tracking-tighter">Cierres: {person.sales} / Efic: {((person.sales / Math.max(person.count, 1)) * 100).toFixed(0)}%</p>
-                   </div>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm font-mono font-black text-indigo-400">${person.commissions.toLocaleString()}</p>
-                  <p className="text-[8px] text-slate-700 font-black uppercase tracking-widest">Comis. Acumulada</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+      <div className="bg-slate-900 rounded-[2.5rem] p-12 text-white flex flex-col md:flex-row items-center justify-between gap-8 shadow-2xl relative overflow-hidden group">
+         <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl -mr-20 -mt-20"></div>
+         <div className="absolute bottom-0 left-0 w-48 h-48 bg-sky-500/10 rounded-full blur-3xl -ml-20 -mb-20"></div>
+         
+         <div className="space-y-3 relative z-10">
+            <h4 className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em]">Liquidación Total del Equipo</h4>
+            <div className="flex items-end gap-3">
+               <p className="text-5xl font-mono font-black italic tracking-tighter text-white">
+                 ${(metrics.setterCommissions + metrics.closerCommissions).toLocaleString()}
+               </p>
+               <span className="text-xs font-black text-emerald-400 mb-2 uppercase tracking-widest flex items-center gap-1">
+                 <TrendingUp className="w-3 h-3" /> Payout
+               </span>
+            </div>
+         </div>
 
-        <div className="bg-slate-900/50 border border-slate-800 rounded-[2rem] p-8 space-y-6 shadow-xl">
-          <h3 className="text-xs font-black text-white uppercase tracking-widest flex items-center gap-3">
-            <ShieldCheck className="w-5 h-5 text-indigo-400" /> Rendimiento de Closers
-          </h3>
-          <div className="grid grid-cols-1 gap-4">
-            {metrics.closerStats.map((person: any) => (
-              <div key={person.name} className="flex items-center justify-between p-4 bg-slate-950/40 rounded-2xl border border-slate-800 hover:border-indigo-500/30 transition-all">
-                <div className="flex items-center gap-4">
-                   <div className="w-10 h-10 bg-slate-800 rounded-xl flex items-center justify-center text-xs font-black text-slate-400">
-                     {person.name.substring(0, 2).toUpperCase()}
-                   </div>
-                   <div>
-                     <p className="text-sm font-black text-white uppercase">{person.name}</p>
-                     <p className="text-[10px] text-slate-600 font-bold uppercase tracking-tighter">Cierres: {person.sales} / Efic: {((person.sales / Math.max(person.count, 1)) * 100).toFixed(0)}%</p>
-                   </div>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm font-mono font-black text-indigo-400">${person.commissions.toLocaleString()}</p>
-                  <p className="text-[8px] text-slate-700 font-black uppercase tracking-widest">Comis. Acumulada</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Footer Info & Actions */}
-      <div className="flex flex-col md:flex-row justify-between items-center p-8 bg-indigo-600/5 border border-indigo-500/10 rounded-[2rem] gap-6">
-        <div className="flex items-center gap-4">
-          <div className="p-3 bg-indigo-500/10 rounded-xl">
-            <Activity className="w-6 h-6 text-indigo-400" />
-          </div>
-          <div>
-            <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Motor BI Activo</p>
-            <p className="text-xs text-slate-500 font-medium max-w-md">
-              Datos auditados para el periodo <span className="text-white font-bold">{localRange === 'all' ? 'Histórico' : localRange === 'month' ? 'Mensual' : 'Semanal'}</span>. Todos los valores financieros son en USD.
-            </p>
-          </div>
-        </div>
-        <button className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] font-black uppercase py-4 px-8 rounded-2xl transition-all shadow-xl shadow-indigo-600/20 active:scale-95">
-          Exportar Data BI (.CSV) <ArrowRight className="w-4 h-4" />
-        </button>
+         <div className="flex gap-12 border-l border-slate-800 pl-12 relative z-10">
+            <div className="text-center group/comis">
+               <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1 group-hover/comis:text-indigo-400 transition-colors">Setter Profit</p>
+               <p className="text-2xl font-mono font-black text-white group-hover/comis:scale-105 transition-transform">${metrics.setterCommissions.toLocaleString()}</p>
+            </div>
+            <div className="text-center group/comis">
+               <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1 group-hover/comis:text-indigo-400 transition-colors">Closer Profit</p>
+               <p className="text-2xl font-mono font-black text-white group-hover/comis:scale-105 transition-transform">${metrics.closerCommissions.toLocaleString()}</p>
+            </div>
+         </div>
       </div>
     </div>
   );
 };
 
-const FunnelStep = ({ label, count, total, color }: { label: string, count: number, total: number, color: string }) => {
-  const width = total > 0 ? (count / total) * 100 : 0;
+const KPICard = ({ label, value, icon: Icon, color }: { label: string, value: string | number, icon: any, color?: string }) => {
   return (
-    <div className="relative h-14 bg-slate-950 border border-slate-800 rounded-2xl overflow-hidden shadow-inner">
-      <div 
-        className={`absolute inset-y-0 left-0 ${color} transition-all duration-1000 flex items-center px-6`} 
-        style={{ width: `${width}%` }}
-      >
-        <span className="text-xs font-black text-white uppercase whitespace-nowrap drop-shadow-md">{label}</span>
-      </div>
-      <div className="absolute inset-y-0 right-6 flex items-center">
-        <span className="text-lg font-mono font-black text-white">{count}</span>
-      </div>
-    </div>
-  );
-};
-
-const KPICard = ({ label, value, subValue, icon: Icon, color }: { label: string, value: string | number, subValue?: string, icon: any, color: string }) => {
-  const colorMap: Record<string, string> = {
-    emerald: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20',
-    indigo: 'text-indigo-400 bg-indigo-500/10 border-indigo-500/20',
-    blue: 'text-blue-400 bg-blue-500/10 border-blue-500/20',
-    amber: 'text-amber-400 bg-amber-500/10 border-amber-500/20',
-  };
-
-  return (
-    <div className="bg-slate-900 border border-slate-800 p-8 rounded-[2rem] group hover:border-indigo-500/40 transition-all shadow-xl relative overflow-hidden">
-      <div className="absolute -right-4 -top-4 w-20 h-20 bg-indigo-500/5 blur-3xl rounded-full"></div>
-      <div className="flex justify-between items-start mb-6 relative z-10">
-        <div className={`p-4 rounded-2xl transition-all ${colorMap[color] || colorMap.indigo}`}>
-          <Icon className="w-6 h-6" />
+    <div className="bg-white border border-slate-200 p-8 rounded-[2rem] group hover:border-indigo-600 transition-all shadow-sm hover:shadow-xl hover:shadow-indigo-50/50">
+      <div className="flex justify-between items-start mb-6">
+        <div className={`p-3 bg-slate-50 rounded-xl group-hover:bg-indigo-50 transition-colors`}>
+          <Icon className={`w-5 h-5 ${color || 'text-indigo-600'} transition-transform group-hover:scale-110`} />
         </div>
-        <div className="p-2 bg-slate-950 rounded-xl border border-slate-800">
-          <ArrowUpRight className="w-4 h-4 text-slate-600 group-hover:text-white transition-colors" />
-        </div>
+        <ArrowUpRight className="w-4 h-4 text-slate-200 group-hover:text-indigo-600" />
       </div>
-      <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest relative z-10">{label}</p>
-      <h3 className="text-3xl font-black text-white mt-2 font-mono tracking-tighter relative z-10">{value}</h3>
-      <p className="text-[9px] font-bold text-slate-600 uppercase mt-2 relative z-10">{subValue}</p>
+      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest group-hover:text-slate-500 transition-colors">{label}</p>
+      <h3 className="text-2xl font-black text-slate-900 mt-1 font-mono tracking-tighter">{value}</h3>
     </div>
   );
 };

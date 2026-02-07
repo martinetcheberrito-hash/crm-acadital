@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
-import { X, Save, ChevronDown, Globe, MapPin, Calendar } from 'lucide-react';
-import { Lead, LeadStatus, LeadOrigin, Qualification } from './types';
+import { X, Save, Globe, MapPin, Calendar, Phone, Briefcase, Users, DollarSign } from 'lucide-react';
+import { Lead, LeadStatus, LeadOrigin, Qualification } from '../types';
 
 interface NewLeadModalProps {
   onClose: () => void;
@@ -33,42 +33,45 @@ const NewLeadModal: React.FC<NewLeadModalProps> = ({ onClose, onSave }) => {
       call_date: new Date(formData.call_date).toISOString(),
       status: LeadStatus.NEW,
       attended: 'Pendiente',
-      whatsapp_confirmed: 'Pendiente',
+      whatsapp_confirmed: 'Si',
       offer_made: false,
       bought: false
     });
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
-      <div className="bg-slate-900 border border-slate-800 w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 my-8">
-        <div className="flex items-center justify-between p-6 border-b border-slate-800 bg-slate-950/20">
-          <h2 className="text-xl font-bold text-white">Introducir información</h2>
-          <button onClick={onClose} className="text-slate-500 hover:text-white transition-colors">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md overflow-y-auto">
+      <div className="bg-white border border-slate-200 w-full max-w-3xl rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 my-8">
+        <div className="flex items-center justify-between p-8 border-b border-slate-100 bg-slate-50/30">
+          <div className="flex flex-col">
+            <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tighter italic">Nuevo Prospecto</h2>
+            <p className="text-[10px] font-black text-indigo-600 uppercase tracking-widest mt-1">Acadital Inteligencia de Negocios</p>
+          </div>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-900 transition-colors p-3 hover:bg-white rounded-2xl border border-transparent hover:border-slate-200 shadow-sm">
             <X className="w-6 h-6" />
           </button>
         </div>
         
-        <form onSubmit={handleSubmit} className="p-6 space-y-6 max-h-[75vh] overflow-y-auto">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Nombre y Apellido *</label>
+        <form onSubmit={handleSubmit} className="p-10 space-y-8 max-h-[75vh] overflow-y-auto custom-scrollbar">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nombre Completo *</label>
               <input 
                 required
-                placeholder="Nombre completo"
-                className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white focus:border-indigo-500 outline-none"
+                placeholder="Ej. Lautaro Freres"
+                className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3.5 text-sm font-bold text-slate-900 focus:border-indigo-600 outline-none transition-all shadow-inner"
                 value={formData.name}
                 onChange={e => setFormData({...formData, name: e.target.value})}
               />
             </div>
-            <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Fecha de Agenda *</label>
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Fecha Agenda *</label>
               <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <input 
                   required
                   type="date"
-                  className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 pl-10 text-sm text-white focus:border-indigo-500 outline-none"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3.5 pl-12 text-sm font-bold text-slate-900 focus:border-indigo-600 outline-none transition-all shadow-inner"
                   value={formData.call_date}
                   onChange={e => setFormData({...formData, call_date: e.target.value})}
                 />
@@ -76,109 +79,118 @@ const NewLeadModal: React.FC<NewLeadModalProps> = ({ onClose, onSave }) => {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Email *</label>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Email *</label>
               <input 
                 required
                 type="email"
-                placeholder="email@ejemplo.com"
-                className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white focus:border-indigo-500 outline-none"
+                placeholder="email@negocio.com"
+                className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3.5 text-sm font-bold text-slate-900 focus:border-indigo-600 outline-none shadow-inner"
                 value={formData.email}
                 onChange={e => setFormData({...formData, email: e.target.value})}
               />
             </div>
-            <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">País *</label>
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Teléfono / WhatsApp *</label>
               <div className="relative">
-                <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <input 
                   required
-                  placeholder="País de residencia"
-                  className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 pl-10 text-sm text-white focus:border-indigo-500 outline-none"
-                  value={formData.country}
-                  onChange={e => setFormData({...formData, country: e.target.value})}
+                  placeholder="+54 9..."
+                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3.5 pl-12 text-sm font-bold text-slate-900 focus:border-indigo-600 outline-none shadow-inner"
+                  value={formData.phone}
+                  onChange={e => setFormData({...formData, phone: e.target.value})}
                 />
               </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-             <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Teléfono *</label>
-              <input 
-                required
-                placeholder="+54 9..."
-                className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white focus:border-indigo-500 outline-none"
-                value={formData.phone}
-                onChange={e => setFormData({...formData, phone: e.target.value})}
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Cualificación Inicial</label>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Facturación Mensual</label>
               <div className="relative">
-                <select
-                  className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white focus:border-indigo-500 outline-none appearance-none"
-                  value={formData.qualification}
-                  onChange={e => setFormData({...formData, qualification: e.target.value as Qualification})}
-                >
-                  <option value={Qualification.LEVEL_1}>Nivel 1 (Top)</option>
-                  <option value={Qualification.LEVEL_2}>Nivel 2 (Medio)</option>
-                  <option value={Qualification.LEVEL_3}>Nivel 3 (Bajo)</option>
-                  <option value={Qualification.NO_CALIF}>No Calif</option>
-                </select>
-                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
+                <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <input 
+                  placeholder="Ej: $5k"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3.5 pl-12 text-sm font-bold text-slate-900 focus:border-indigo-600 outline-none shadow-inner"
+                  value={formData.monthly_revenue}
+                  onChange={e => setFormData({...formData, monthly_revenue: e.target.value})}
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Inversión Ads</label>
+              <div className="relative">
+                <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <input 
+                  placeholder="Ej: $1k"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3.5 pl-12 text-sm font-bold text-slate-900 focus:border-indigo-600 outline-none shadow-inner"
+                  value={formData.ad_spend}
+                  onChange={e => setFormData({...formData, ad_spend: e.target.value})}
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Toma Decisiones</label>
+              <div className="relative">
+                <Users className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <input 
+                  placeholder="¿Sí o No?"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3.5 pl-12 text-sm font-bold text-slate-900 focus:border-indigo-600 outline-none shadow-inner"
+                  value={formData.decision_maker}
+                  onChange={e => setFormData({...formData, decision_maker: e.target.value})}
+                />
               </div>
             </div>
           </div>
 
-          <div className="space-y-1">
-            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Página Web / Redes</label>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+             <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">País *</label>
+              <div className="relative">
+                <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <input 
+                  required
+                  placeholder="Ej. Argentina"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3.5 pl-12 text-sm font-bold text-slate-900 focus:border-indigo-600 outline-none shadow-inner"
+                  value={formData.country}
+                  onChange={e => setFormData({...formData, country: e.target.value})}
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Origen Acadital</label>
+              <select
+                className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3.5 text-sm font-bold text-slate-900 focus:border-indigo-600 outline-none appearance-none shadow-inner"
+                value={formData.origin}
+                onChange={e => setFormData({...formData, origin: e.target.value as LeadOrigin})}
+              >
+                {Object.values(LeadOrigin).map(origin => (
+                  <option key={origin} value={origin}>{origin}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Sitio Web / LinkedIn / RRSS</label>
             <div className="relative">
-              <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+              <Globe className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <input 
-                placeholder="URL de negocio"
-                className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 pl-10 text-sm text-white focus:border-indigo-500 outline-none"
+                placeholder="https://..."
+                className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3.5 pl-12 text-sm font-bold text-slate-900 focus:border-indigo-600 outline-none shadow-inner"
                 value={formData.website}
                 onChange={e => setFormData({...formData, website: e.target.value})}
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Origen LEAD</label>
-              <div className="relative">
-                <select
-                  className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white focus:border-indigo-500 outline-none appearance-none"
-                  value={formData.origin}
-                  onChange={e => setFormData({...formData, origin: e.target.value as LeadOrigin})}
-                >
-                  {Object.values(LeadOrigin).map(origin => (
-                    <option key={origin} value={origin}>{origin}</option>
-                  ))}
-                </select>
-                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Notas Iniciales</label>
-            <textarea 
-              rows={3}
-              className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white focus:border-indigo-500 outline-none resize-none"
-              placeholder="Contexto relevante del lead..."
-              value={formData.notes}
-              onChange={e => setFormData({...formData, notes: e.target.value})}
-            />
-          </div>
-
           <button 
             type="submit"
-            className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-4 rounded-xl transition-all shadow-lg shadow-indigo-900/20 flex items-center justify-center gap-2"
+            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black py-5 rounded-[1.5rem] transition-all shadow-xl shadow-indigo-100 flex items-center justify-center gap-3 uppercase tracking-widest text-[11px] active:scale-95"
           >
-            <Save className="w-4 h-4" /> Agendar y Registrar
+            <Save className="w-5 h-5" /> AGENDAR NUEVO PROSPECTO
           </button>
         </form>
       </div>

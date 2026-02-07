@@ -5,12 +5,12 @@ import {
   Settings, ShieldCheck, DollarSign, Loader2, AlertCircle, RefreshCw, Trash2, Target, Calendar
 } from 'lucide-react';
 import { Lead, LeadStatus, LeadOrigin, DashboardStats, Qualification } from './types';
-import { supabase } from './lib/supabase';
-import StatsCard from './components/StatsCard';
-import LeadsTable from './components/LeadsTable';
-import LeadDetailModal from './components/LeadDetailModal';
-import NewLeadModal from './components/NewLeadModal';
-import ReportsView from './components/ReportsView';
+import { supabase } from './supabase';
+import StatsCard from './StatsCard';
+import LeadsTable from './LeadsTable';
+import LeadDetailModal from './LeadDetailModal';
+import NewLeadModal from './NewLeadModal';
+import ReportsView from './ReportsView';
 
 type View = 'dashboard' | 'leads' | 'reports' | 'settings';
 type DateRange = '7days' | 'month' | 'all';

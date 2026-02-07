@@ -1,6 +1,6 @@
 
 import React, { useMemo, useState } from 'react';
-import { Lead, LeadOrigin, Qualification } from '../types';
+import { Lead, LeadOrigin, Qualification } from './types';
 import { 
   BarChart3, 
   Target, 

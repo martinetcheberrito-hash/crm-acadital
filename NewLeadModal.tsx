@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { X, Save, ChevronDown, Globe, MapPin, Calendar } from 'lucide-react';
-import { Lead, LeadStatus, LeadOrigin, Qualification } from '../types';
+import { Lead, LeadStatus, LeadOrigin, Qualification } from './types';
 
 interface NewLeadModalProps {
   onClose: () => void;

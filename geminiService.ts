@@ -1,6 +1,6 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
-import { Lead } from "../types";
+import { Lead } from "./types";
 
 const getAIClient = () => {
   // Fix: Create a new GoogleGenAI instance right before making an API call

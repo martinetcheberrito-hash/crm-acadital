@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { User, ChevronRight, Zap, Target, Globe, CheckCircle2, XCircle, Calendar, Clock } from 'lucide-react';
-import { Lead, Qualification } from '../types';
+import { Lead, Qualification } from './types';
 
 interface LeadsTableProps {
   leads: Lead[];

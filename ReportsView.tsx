@@ -1,6 +1,6 @@
 
 import React, { useMemo, useState, useEffect } from 'react';
-import { Lead, LeadOrigin, Qualification } from '../types';
+import { Lead, LeadOrigin, Qualification } from './types';
 import { 
   BarChart3, Target, TrendingUp, DollarSign, ArrowUpRight, Users, Zap, PieChart, Activity, Wallet, Clock, Filter, Calendar, Percent, UserCheck, ChevronDown
 } from 'lucide-react';

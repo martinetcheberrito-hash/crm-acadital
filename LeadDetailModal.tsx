@@ -1,8 +1,8 @@
 
 import React, { useState, useRef } from 'react';
 import { X, BrainCircuit, Calendar, DollarSign, Loader2, Zap, Target, Image as ImageIcon, MessageSquare, Globe, BarChart, Users, CheckCircle2, XCircle, MapPin, TrendingUp, Clock, UserCheck, ShieldCheck, Trash2, Phone, Briefcase, Eye } from 'lucide-react';
-import { Lead, LeadOrigin, Qualification, LeadStatus } from '../types';
-import { generateLeadStrategy, analyzeChatScreenshot } from '../services/geminiService';
+import { Lead, LeadOrigin, Qualification, LeadStatus } from './types';
+import { generateLeadStrategy, analyzeChatScreenshot } from './geminiService';
 
 interface LeadDetailModalProps {
   lead: Lead;
